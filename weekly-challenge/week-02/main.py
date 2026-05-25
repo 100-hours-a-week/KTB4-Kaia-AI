@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 import sqlite3
+import httpx
 
 class Post(BaseModel):
     author: str
@@ -21,7 +22,6 @@ class Comment(BaseModel):
 class CommentUpdate(BaseModel):
     author: Optional[str] = None
     content: Optional[str] = None
-
 
 # database connection
 conn = sqlite3.connect("board.db")
@@ -78,6 +78,44 @@ async def read_post(post_id: int):
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return dict(post)
+
+@app.get("/posts/{post_id}/summary")
+async def summarize_post(post_id: int):
+    post = cur.execute("SELECT * FROM post WHERE post_id = ?", (post_id,)).fetchone()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    payload = {
+        "model": "gemma4:e4b",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a concise summarization assistant. "
+                    "Always respond in the same language as the input text. "
+                    "Keep the summary natural, concise, and easy to read."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Summarize the following post in 3-5 sentences. "
+                    f"Use section headers only when the post clearly contains multiple unrelated topics. "
+                    f"Return only the summary.\n\n"
+                    f"{post['content']}"
+                ),
+            },
+        ],
+    }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            "http://localhost:11434/v1/chat/completions",
+            json=payload,
+            timeout=120.0,
+        )
+    result = response.json()
+    if "choices" not in result or not result["choices"]:
+        raise HTTPException(status_code=502, detail="AI response error")
+    return {"summary": result["choices"][0]["message"]["content"]}
 
 ALLOWED_POST_COLUMNS = {"author", "title", "content"}
 
