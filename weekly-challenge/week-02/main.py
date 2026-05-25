@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+import sqlite3
 
 class Post(BaseModel):
     author: str
@@ -21,119 +22,132 @@ class CommentUpdate(BaseModel):
     author: Optional[str] = None
     content: Optional[str] = None
 
+
+# database connection
+conn = sqlite3.connect("board.db")
+conn.row_factory = sqlite3.Row
+cur = conn.cursor()
+
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS post(
+        post_id INTEGER PRIMARY KEY,
+        author TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP
+    )
+""")
+
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS comment(
+        comment_id INTEGER PRIMARY KEY,
+        post_id INTEGER NOT NULL,
+        author TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP
+    )
+""")
+
+conn.commit()
+
+
+# FastAPI app
 app = FastAPI()
-
-posts = []
-next_post_id = 1
-next_comment_id = 1
-
-def find_post(post_id: int):
-    for post in posts:
-        if post["post_id"] == post_id:
-            return post
-    return None
 
 # 게시글 기능
 @app.post("/posts/")
 async def write_post(post: Post):
-    global next_post_id
-    posts.append(
-        {
-            "post_id": next_post_id,
-            "author": post.author,
-            "title": post.title,
-            "content": post.content,
-            "comments": [],
-            "created_at": datetime.now(),
-        }
+    cur.execute(
+        "INSERT INTO post (author, title, content, created_at) VALUES (?, ?, ?, ?)",
+        (post.author, post.title, post.content, datetime.now())
     )
-    next_post_id += 1
-    return posts[-1]
+    conn.commit()
+    new_id = cur.lastrowid
+    return dict(cur.execute("SELECT * FROM post WHERE post_id = ?", (new_id,)).fetchone())
 
-@app.get("/posts/") 
+@app.get("/posts/")
 async def read_post_list():
-    return posts
+    cur.execute("SELECT * FROM post")
+    return [dict(row) for row in cur.fetchall()]
 
 @app.get("/posts/{post_id}")
 async def read_post(post_id: int):
-    post = find_post(post_id)
+    post = cur.execute(
+        "SELECT * FROM post WHERE post_id = ?", (post_id,)
+    ).fetchone()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    return post
+    return dict(post)
 
+ALLOWED_POST_COLUMNS = {"author", "title", "content"}
 
 @app.patch("/posts/{post_id}")
 async def update_post(post_id: int, post: PostUpdate):
-    post_to_update = find_post(post_id)
+    post_to_update = cur.execute(
+        "SELECT * FROM post WHERE post_id = ?", (post_id,)
+    ).fetchone()
     if not post_to_update:
         raise HTTPException(status_code=404, detail="Post not found")
-    if post.author is not None:
-        post_to_update["author"] = post.author
-    if post.title is not None:
-        post_to_update["title"] = post.title
-    if post.content is not None:
-        post_to_update["content"] = post.content
-    return post_to_update
-
+    update_data = post.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        if key not in ALLOWED_POST_COLUMNS:
+            raise HTTPException(status_code=400, detail=f"Invalid field: {key}")
+        cur.execute(f"UPDATE post SET {key} = ? WHERE post_id = ?", (value, post_id))
+    conn.commit()
+    return dict(cur.execute("SELECT * FROM post WHERE post_id = ?", (post_id,)).fetchone())
 
 @app.delete("/posts/{post_id}")
 async def delete_post(post_id: int):
-    post = find_post(post_id)
+    post = cur.execute("SELECT * FROM post WHERE post_id = ?", (post_id,)).fetchone()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    posts.remove(post)
+    cur.execute("DELETE FROM comment WHERE post_id = ?", (post_id,))
+    cur.execute("DELETE FROM post WHERE post_id = ?", (post_id,))
+    conn.commit()
     return {"message": "Post deleted successfully"}
-
 
 # 댓글 기능
 @app.post("/posts/{post_id}/comments/")
 async def write_comment(post_id: int, comment: Comment):
-    global next_comment_id
-    post = find_post(post_id)
+    post = cur.execute("SELECT post_id FROM post WHERE post_id = ?", (post_id,)).fetchone()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
-    post_comment = post["comments"]
-    post_comment.append(
-        {
-            "comment_id": next_comment_id,
-            "author": comment.author,
-            "content": comment.content,
-            "created_at": datetime.now()
-        }
+    cur.execute(
+        "INSERT INTO comment (post_id, author, content, created_at) VALUES (?, ?, ?, ?)",
+        (post_id, comment.author, comment.content, datetime.now())
     )
-    next_comment_id += 1
-    return post_comment[-1]
+    conn.commit()
+    new_id = cur.lastrowid
+    return dict(cur.execute("SELECT * FROM comment WHERE comment_id = ?", (new_id,)).fetchone())
 
 @app.get("/posts/{post_id}/comments/")
 async def read_comment(post_id: int):
-    post = find_post(post_id)
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    return post["comments"]
+    cur.execute("SELECT * FROM comment WHERE post_id = ?", (post_id,))
+    return [dict(row) for row in cur.fetchall()]
 
 @app.patch("/posts/{post_id}/comments/{comment_id}")
 async def update_comment(post_id: int, comment_id: int, comment: CommentUpdate):
-    post = find_post(post_id)
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    comment_to_update = next((c for c in post["comments"] if c["comment_id"] == comment_id), None)
+    comment_to_update = cur.execute(
+        "SELECT * FROM comment WHERE comment_id = ? AND post_id = ?", (comment_id, post_id)
+    ).fetchone()
     if not comment_to_update:
         raise HTTPException(status_code=404, detail="Comment not found")
-    if comment.author is not None:
-        comment_to_update["author"] = comment.author
-    if comment.content is not None:
-        comment_to_update["content"] = comment.content
+    update_data = comment.model_dump(exclude_unset=True)
+    if "author" in update_data:
+        cur.execute("UPDATE comment SET author = ? WHERE comment_id = ?", (update_data["author"], comment_id))
+    if "content" in update_data:
+        cur.execute("UPDATE comment SET content = ? WHERE comment_id = ?", (update_data["content"], comment_id))
+    conn.commit()
+    return dict(cur.execute("SELECT * FROM comment WHERE comment_id = ?", (comment_id,)).fetchone())
 
-    return comment_to_update
 
 @app.delete("/posts/{post_id}/comments/{comment_id}")
 async def delete_comment(post_id: int, comment_id: int):
-    post = find_post(post_id)
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    comment = next((c for c in post["comments"] if c["comment_id"] == comment_id), None)
+    comment = cur.execute(
+        "SELECT * FROM comment WHERE comment_id = ? AND post_id = ?", (comment_id, post_id)
+    ).fetchone()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
-    post["comments"].remove(comment)
+    cur.execute("DELETE FROM comment WHERE comment_id = ?", (comment_id,))
+    conn.commit()
     return {"message": "Comment deleted successfully"}
