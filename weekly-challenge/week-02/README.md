@@ -6,7 +6,7 @@
 
 ## 소개
 
-SQLite를 DB로 사용하는 RESTful 게시판 서버입니다.
+SQLite를 DB로 사용하는 RESTful 게시판 서버와 Streamlit 기반 프론트엔드로 구성된 게시판 프로젝트입니다.
 Post / Comment CRUD와 Ollama를 중계하는 AI 요약 기능을 제공합니다.
 단일 `main.py`로 시작해 Router → Controller → Model의 3-layer 구조로 리팩토링하는 과정까지 담은 프로젝트입니다.
 
@@ -17,6 +17,7 @@ Post / Comment CRUD와 Ollama를 중계하는 AI 요약 기능을 제공합니�
 - REST 원칙에 맞는 Post / Comment CRUD API 설계 및 구현
 - Ollama를 중계(Relay)하여 게시글 AI 요약 기능 추가
 - 단일 `main.py` → 3-layer 구조(Router / Controller / Model)로 리팩토링
+- Streamlit 기반 프론트엔드 구현 (게시글/댓글 전체 CRUD + AI 요약 UI)
 
 ---
 
@@ -25,11 +26,11 @@ Post / Comment CRUD와 Ollama를 중계하는 AI 요약 기능을 제공합니�
 | 항목 | 내용 |
 |------|------|
 | Language | Python 3.11 |
-| Framework | FastAPI |
-| Server | Uvicorn |
+| Backend | FastAPI + Uvicorn |
+| Frontend | Streamlit |
 | Database | SQLite (sqlite3) |
 | Validation | Pydantic |
-| HTTP Client | httpx |
+| HTTP Client | httpx (backend) · requests (frontend) |
 | AI | Ollama (gemma4:e4b) |
 
 ---
@@ -63,11 +64,36 @@ Post / Comment CRUD와 Ollama를 중계하는 AI 요약 기능을 제공합니�
 
 ---
 
+## 프론트엔드 (Streamlit)
+
+`frontend.py`는 FastAPI 서버를 호출하는 Streamlit 기반 UI입니다.
+
+**주요 화면**
+
+| 화면 | 기능 |
+|------|------|
+| 게시글 목록 | Hero 섹션, 제목 + 본문 미리보기, 댓글 수 배지, 작성자/날짜 |
+| 게시글 상세 | 탭 구조 — 본문 / AI 요약 / 댓글 |
+| 본문 탭 | 게시글 내용, 수정/삭제 (삭제 확인 UI 포함) |
+| AI 요약 탭 | 요약 생성 버튼 → Ollama 호출 결과 카드 |
+| 댓글 탭 | 댓글 목록 (작성자 아바타, 수정/삭제), 댓글 작성 폼 |
+| 글 쓰기 | 작성자/제목/내용 입력 폼, 취소/등록 |
+
+**구현 특이사항**
+
+- `@st.cache_data(ttl=20)` — 목록 페이지의 댓글 수를 캐싱해 매 렌더마다 N+1 요청 방지
+- CSS 변수 (`--text-color`, `--secondary-background-color` 등) 활용으로 라이트/다크 테마 자동 대응
+- 작성자 이름에서 결정론적 HSL 색상을 계산해 아바타 생성
+- `html.escape()` 로 모든 사용자 입력값 XSS 처리
+
+---
+
 ## 프로젝트 구조
 
 ```
 week-02/
-├── main.py               # 앱 초기화 + 라우터 등록 (10줄)
+├── main.py               # 앱 초기화 + 라우터 등록
+├── frontend.py           # Streamlit 프론트엔드
 ├── schemas.py            # Pydantic 요청/응답 스키마
 ├── database/
 │   └── db.py             # DB 연결 (get_db, create_db_and_tables)
@@ -107,12 +133,23 @@ week-02/
 
 ## 실행
 
+**백엔드 (FastAPI)**
+
 ```bash
 cd weekly-challenge/week-02
 fastapi dev main.py
 # 또는
 uvicorn main:app --reload
 ```
+
+**프론트엔드 (Streamlit)** — 백엔드가 먼저 실행 중이어야 한다.
+
+```bash
+streamlit run frontend.py
+```
+
+브라우저에서 `http://localhost:8501` 접속.  
+FastAPI Swagger 문서는 `http://localhost:8000/docs`.
 
 AI 요약 기능은 Ollama가 로컬에서 실행 중이어야 동작한다.
 
@@ -217,10 +254,11 @@ FastAPI를 사용해 CRUD 구조 설계, SQLite 연동, Ollama 기반 로컬 LLM
 
 <br>
 
-- 인증 기능이 없어 모든 요청이 공개되어 있습니다.
+- 인증 기능이 없어 누구나 모든 게시글/댓글을 수정·삭제할 수 있습니다.
 - SQLite 기반이라 동시성 처리에는 한계가 있습니다.
 - AI 요약 기능은 단순 relay 구조이며, streaming 응답이나 prompt 최적화는 적용하지 않았습니다.
 - 예외 처리 방식이 레이어별로 완전히 분리되어 있지는 않습니다.
+- Streamlit의 전체 재렌더링 특성으로 인해 탭 선택 등 일부 UI 상태가 초기화될 수 있습니다.
 
 </details>
 
