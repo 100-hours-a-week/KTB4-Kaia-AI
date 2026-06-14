@@ -1,14 +1,7 @@
-"""SentencePiece BPE 토크나이저 학습/적용 (Mini GPT용).
+"""SentencePiece BPE 토크나이저 학습/적용.
 
 학습:
-    python tokenizer.py train
     python tokenizer.py train --corpus data/corpus.txt --vocab-size 16000
-
-사용:
-    from tokenizer import Tokenizer
-    tok = Tokenizer()
-    ids = tok.encode("안녕하세요")
-    text = tok.decode(ids)
 """
 
 import argparse

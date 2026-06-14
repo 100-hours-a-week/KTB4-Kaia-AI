@@ -1,8 +1,8 @@
-"""Corpus 빌더: 한국어 위키피디아(70%) + FineWeb Korean(30%)을 스트리밍으로 받아
-data/corpus.txt 로 합친다. (Mini GPT pretraining 코퍼스, 목표 100~500MB)
+"""Corpus 빌더: 한국어 위키피디아 + FineWeb Korean으로 채워서 data/ 에 코퍼스 텍스트를 생성.
+위키 한국어는 ~1GB 정도라서, 목표 크기가 크면 나머지를 FineWeb-2 Korean으로 채움.
 
-Usage:
-    python data_preprocess.py --target-mb 500
+사용:
+    python data_preprocess.py --target-mb 11500 --output corpus.txt
 """
 
 import argparse
@@ -13,13 +13,11 @@ import sys
 from datasets import load_dataset
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_PATH = os.path.join(BASE_DIR, "data", "corpus.txt")
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
 WIKI_DATASET = ("wikimedia/wikipedia", "20231101.ko")
 FINEWEB_DATASET = ("HuggingFaceFW/fineweb-2", "kor_Hang")
 
-WIKI_RATIO = 0.7
-FINEWEB_RATIO = 0.3
 LOG_EVERY_MB = 10
 
 
@@ -58,27 +56,34 @@ def stream_to_file(f, dataset_iter, target_bytes: int, source_name: str) -> int:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--target-mb", type=float, default=500, help="corpus.txt 목표 크기(MB)")
+    parser.add_argument("--output", default="corpus.txt", help="data/ 디렉토리에 저장할 출력 파일명")
     args = parser.parse_args()
 
     target_bytes = int(args.target_mb * 1024 * 1024)
-    wiki_target = int(target_bytes * WIKI_RATIO)
-    fineweb_target = int(target_bytes * FINEWEB_RATIO)
+    output_path = os.path.join(DATA_DIR, args.output)
 
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
 
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        print(f"== Korean Wikipedia 스트리밍 시작 (목표 {wiki_target / 1e6:.1f}MB) ==", flush=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        print(f"== Korean Wikipedia 스트리밍 시작 (목표 {target_bytes / 1e6:.1f}MB, 있는 만큼 전부 사용) ==", flush=True)
         wiki = load_dataset(*WIKI_DATASET, split="train", streaming=True)
-        wiki_written = stream_to_file(f, wiki, wiki_target, "wiki")
+        wiki_written = stream_to_file(f, wiki, target_bytes, "wiki")
         print(f"== Wikipedia 완료: {wiki_written / 1e6:.1f}MB ==", flush=True)
 
-        print(f"== FineWeb Korean 스트리밍 시작 (목표 {fineweb_target / 1e6:.1f}MB) ==", flush=True)
-        fineweb = load_dataset(*FINEWEB_DATASET, split="train", streaming=True)
-        fineweb_written = stream_to_file(f, fineweb, fineweb_target, "fineweb")
-        print(f"== FineWeb 완료: {fineweb_written / 1e6:.1f}MB ==", flush=True)
+        remaining_bytes = target_bytes - wiki_written
+        fineweb_written = 0
+        if remaining_bytes > 0:
+            print(f"== FineWeb Korean 스트리밍 시작 (목표 {remaining_bytes / 1e6:.1f}MB) ==", flush=True)
+            fineweb = load_dataset(*FINEWEB_DATASET, split="train", streaming=True)
+            fineweb_written = stream_to_file(f, fineweb, remaining_bytes, "fineweb")
+            print(f"== FineWeb 완료: {fineweb_written / 1e6:.1f}MB ==", flush=True)
 
     total_mb = (wiki_written + fineweb_written) / 1e6
-    print(f"== corpus.txt 생성 완료: 총 {total_mb:.1f}MB -> {OUTPUT_PATH} ==", flush=True)
+    print(
+        f"== {args.output} 생성 완료: 총 {total_mb:.1f}MB "
+        f"(wiki {wiki_written / 1e6:.1f}MB + fineweb {fineweb_written / 1e6:.1f}MB) -> {output_path} ==",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

@@ -136,11 +136,20 @@ class MiniGPT(nn.Module):
         max_new_tokens: int,
         temperature: float = 1.0,
         top_k: int | None = None,
+        repetition_penalty: float = 1.0,
     ) -> torch.Tensor:
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -self.block_size:]
             logits, _ = self(idx_cond)
             logits = logits[:, -1, :] / temperature
+
+            if repetition_penalty != 1.0:
+                for b in range(idx.size(0)):
+                    for token_id in set(idx[b].tolist()):
+                        if logits[b, token_id] > 0:
+                            logits[b, token_id] /= repetition_penalty
+                        else:
+                            logits[b, token_id] *= repetition_penalty
 
             if top_k is not None:
                 v, _ = torch.topk(logits, top_k)
