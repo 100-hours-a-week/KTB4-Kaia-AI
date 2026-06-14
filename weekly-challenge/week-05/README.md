@@ -23,7 +23,11 @@
 - `make_classification`으로 가상 데이터셋 생성 (1000 samples, 20 features)
 - RandomForest 기준 GridSearch(27회 탐색) vs RandomSearch(20회 탐색) 비교
 
-### 5. 한국어 챗봇 
+### 5. 한국어 챗봇 (Mini GPT)
+- 사전학습 LLM 없이 Decoder-only Transformer를 직접 구현 (54.3M params, vocab=16000)
+- Wikipedia + FineWeb-2 한국어 코퍼스(~11.5GB)로 사전학습 (30000 steps)
+- FastAPI로 서빙 — 입력 텍스트 1개에 생성 파라미터 조합 최대 3개를 비교하는 `/tests` API
+- 설계/진행 상황: [DESIGN.md](./DESIGN.md), [PLAN.md](./PLAN.md)
 
 ---
 
