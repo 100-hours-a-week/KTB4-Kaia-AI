@@ -1,5 +1,5 @@
-"""MiniGPT: Decoder-only Transformer 직접 구현.
-
+"""
+MiniGPT: Decoder-only Transformer
 CausalSelfAttention -> TransformerBlock -> MiniGPT
 """
 
