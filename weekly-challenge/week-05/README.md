@@ -1,4 +1,4 @@
-# 전이학습, 하이퍼파라미터 튜닝 & 한국어 챗봇
+# 전이학습, 하이퍼파라미터 튜닝 & 언어모델
 
 > 위클리챌린지 5주차 - ResNet50/VGG16 전이학습 비교, GridSearch/RandomSearch 튜닝, 한국어 챗봇 만들기
 
@@ -27,7 +27,7 @@
 - 사전학습 LLM 없이 Decoder-only Transformer를 직접 구현 (54.3M params, vocab=16000)
 - Wikipedia + FineWeb-2 한국어 코퍼스(~11.5GB)로 사전학습 (30000 steps)
 - FastAPI로 서빙 — 입력 텍스트 1개에 생성 파라미터 조합 최대 3개를 비교하는 `/tests` API
-- 설계/진행 상황: [DESIGN.md](./DESIGN.md), [PLAN.md](./PLAN.md)
+- 자세한 내용: [MiniGPT.md](./MiniGPT.md)
 
 ---
 
@@ -50,3 +50,4 @@
 ---
 
 ## 회고
+> MiniGPT-KO (한국어 언어모델 사전학습) 회고는 규모가 달라 별도 정리: [MiniGPT.md](./MiniGPT.md)
