@@ -225,19 +225,3 @@ streamlit run frontend.py
 - 학습 로그와 평가 지표를 체계적으로 수집하는 평가 파이프라인을 구축하고 싶다.
 - 추론 최적화 및 모델 압축 기법을 적용하여 실제 서비스 환경에서도 활용 가능한 수준으로 개선해보고 싶다.
 
-
----
-
-**배운 점**
-- ResNet50(24M)과 VGG16(138M)의 파라미터 수가 5배 이상 차이나는데 CIFAR-10 정확도는 48.50% vs 47.48%로 거의 같았다. 더 큰 모델이 항상 좋은 게 아니라, 태스크에 맞는 구조와 데이터가 중요하다는 걸 수치로 확인했다
-- GridSearch(27회)와 RandomSearch(20회)가 동일한 Test Accuracy(0.9250)를 냈다. 탐색 횟수가 적어도 랜덤 샘플링이 충분히 좋은 조합을 찾을 수 있고, 탐색 공간이 커질수록 RandomSearch의 효율 이점이 더 커진다는 걸 배웠다
-- pretrained conv layer를 그대로 두고 커스텀 헤드만 학습해도 빠르게 수렴했다. feature extractor를 건드리지 않아도 downstream 태스크에 적용된다는 걸 직접 확인했다
-
-**어려웠던 점**
-- 두 모델 모두 정확도가 50% 미만이었다. CIFAR-10은 32×32 저해상도 이미지라 ImageNet으로 학습된 feature가 충분히 전이되지 않은 것으로 보이는데, conv layer를 freeze한 채 헤드만 학습하는 방식의 한계를 느꼈다
-
-**보완하고 싶은 점**
-- conv layer 일부를 unfreeze해서 fine-tuning했을 때 성능이 얼마나 달라지는지 비교해보고 싶다
-- Bayesian Optimization도 적용해서 GridSearch / RandomSearch와 탐색 효율을 비교해보고 싶다
-
-> MiniGPT-KO (한국어 언어모델 사전학습) 회고는 규모가 달라 별도 정리: [MiniGPT.md](./MiniGPT.md)
