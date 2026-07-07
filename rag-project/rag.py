@@ -22,10 +22,12 @@ CHROMA_COLLECTION = "cs231n"
 TOP_K = 5
 
 
+# ---------------- 임베딩 & 벡터스토어 ----------------
+
 def _build_embeddings():
     return HuggingFaceEmbeddings(
         model_name="BAAI/bge-m3",
-        model_kwargs={"device": "cpu"},
+        model_kwargs={"device": "cuda" if os.getenv("USE_CUDA", "false").lower() == "true" else "cpu"},
         encode_kwargs={"normalize_embeddings": True},
     )
 
@@ -94,6 +96,12 @@ def _get_vectorstore(embeddings):
     )
 
 
+def _get_retriever(embeddings, k: int = TOP_K):
+    return _get_vectorstore(embeddings).as_retriever(search_kwargs={"k": k})
+
+
+# ---------------- LLM ----------------
+
 def _build_llm():
     # 생성 LLM만 provider를 고른다(LLM_PROVIDER).
     if os.getenv("LLM_PROVIDER", "google").lower() == "ollama":
@@ -107,6 +115,8 @@ def _build_llm():
         google_api_key=os.getenv("GOOGLE_API_KEY"),
     )
 
+
+# ---------------- 프롬프트 & 체인 조립 ----------------
 
 PROMPT = ChatPromptTemplate.from_messages([
     ("system",
@@ -142,8 +152,7 @@ def ingest():
 def build_rag_chain():
     """인덱싱(필요 시) + LCEL 체인 구성. invoke(question) → {answer, sources}."""
     embeddings = _build_embeddings()
-    vectorstore = _get_vectorstore(embeddings)
-    retriever = vectorstore.as_retriever(search_kwargs={"k": TOP_K})
+    retriever = _get_retriever(embeddings)
     llm = _build_llm()
 
     # 검색을 1회만 수행해 답변 생성과 출처 추출이 같은 docs를 공유
