@@ -1,14 +1,19 @@
 /* ---- tokens ----
-   paper + highlighter marker: a document you'd actually mark up evidence on. */
+   paper you'd actually keep a learning log on. terracotta marks a question,
+   moss marks something just planted — the two things this agent does. */
 :root {
-  --bg: #f7f7f4;
-  --bg-raised: #ffffff;
-  --ink: #1c1f1d;
-  --ink-dim: #565d66;
+  --bg: #f6f3ec;
+  --bg-raised: #fffdf8;
+  --ink: #211f19;
+  --ink-dim: #67614f;
   --accent: #b23a2e;
+  /* inquiry — terracotta, digging for an answer */
+  --growth: #4b6a4a;
+  /* journal — moss, something newly planted */
+  --growth-soft: #eef1e6;
   --chalk: #a6821c;
-  --rule: rgba(28, 31, 29, 0.08);
-  --rule-strong: rgba(28, 31, 29, 0.16);
+  --rule: rgba(33, 31, 25, 0.08);
+  --rule-strong: rgba(33, 31, 25, 0.16);
 
   --mono: "JetBrains Mono", ui-monospace, monospace;
   --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
@@ -38,50 +43,12 @@ body {
 }
 
 .page {
-  max-width: 46rem;
+  max-width: 42rem;
   margin: 0 auto;
-  padding: clamp(2.5rem, 6vw, 5.5rem) 1.5rem 6rem;
-}
-
-/* ---- header ---- */
-.eyebrow {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin: 0 0 1.1rem;
-}
-
-.title {
-  font-family: var(--sans);
-  font-weight: 700;
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  line-height: 1.1;
-  margin: 0 0 1rem;
-  letter-spacing: -0.02em;
-}
-
-.sub {
-  font-size: 1.05rem;
-  line-height: 1.65;
-  color: var(--ink-dim);
-  max-width: 32rem;
-  margin: 0 0 0.9rem;
-}
-
-.sub code {
-  font-family: var(--mono);
-  font-size: 0.88em;
-  color: var(--chalk);
-}
-
-.corpus-note {
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  font-weight: 400;
-  color: var(--ink-dim);
-  margin: 0 0 2.75rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.75rem, 5vw, 3rem) 1.25rem 0;
 }
 
 /* ---- accessibility utility ---- */
@@ -97,212 +64,85 @@ body {
   border: 0;
 }
 
-/* ---- prompt bar ---- */
-.prompt-bar {
+/* ---- header ---- */
+.head {
+  padding-bottom: 1.75rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 1.75rem;
+}
+
+.head-top {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: var(--bg-raised);
-  border: 1px solid var(--rule-strong);
-  border-radius: 8px;
-  padding: 0.9rem 1rem;
-  box-shadow: 0 1px 2px rgba(28, 31, 29, 0.04), 0 6px 16px rgba(28, 31, 29, 0.05);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.prompt-bar:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 1px 2px rgba(28, 31, 29, 0.04), 0 6px 16px rgba(178, 58, 46, 0.08);
-}
-
-.prompt-caret {
+.eyebrow {
   font-family: var(--mono);
-  color: var(--accent);
-  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--growth);
+  margin: 0 0 0.4rem;
 }
 
-.prompt-bar input {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 1rem;
+.title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  line-height: 1.15;
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 
-.prompt-bar input::placeholder {
+.sub {
+  font-size: 0.98rem;
+  line-height: 1.6;
   color: var(--ink-dim);
+  max-width: 30rem;
+  margin: 0.75rem 0 0;
 }
 
-.prompt-bar button {
-  background: none;
-  border: 1px solid var(--rule-strong);
-  border-radius: 3px;
+.corpus-note {
+  font-family: var(--mono);
+  font-size: 0.75rem;
   color: var(--ink-dim);
+  margin: 0.6rem 0 0;
+}
+
+.new-thread-btn {
+  flex-shrink: 0;
   font-family: var(--mono);
-  font-size: 0.95rem;
-  padding: 0.35rem 0.6rem;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-}
-
-.prompt-bar button:hover:not(:disabled) {
-  color: var(--ink);
-  background: var(--chalk);
-  border-color: var(--chalk);
-}
-
-.prompt-bar button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.prompt-bar input:focus-visible,
-.prompt-bar button:focus-visible,
-.chip-example:focus-visible {
-  outline: 2px solid var(--chalk);
-  outline-offset: 2px;
-}
-
-/* ---- example chips ---- */
-.examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-top: 1.1rem;
-}
-
-.chip-example {
-  font-family: var(--mono);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--ink-dim);
   background: none;
   border: 1px dashed var(--rule-strong);
   border-radius: 999px;
-  padding: 0.4rem 0.9rem;
+  padding: 0.4rem 0.85rem;
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease;
+  margin-top: 0.2rem;
 }
 
-.chip-example:hover {
+.new-thread-btn:hover {
   color: var(--ink);
   border-color: var(--ink-dim);
 }
 
-/* ---- flow (signature retrieval trace) ---- */
-.flow {
-  position: relative;
-  height: 0;
-  margin-left: 1.2rem;
-  overflow: visible;
+/* ---- thread ---- */
+.thread {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.9rem;
+  padding-bottom: 1.5rem;
 }
 
-.flow-line {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 1px;
-  height: 0;
-  background: var(--rule-strong);
-  transition: height 0.4s ease;
-}
-
-.flow-dot {
-  position: absolute;
-  left: -3px;
-  top: -4px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--chalk);
-  opacity: 0;
-}
-
-.flow.is-loading {
-  height: 2.75rem;
-}
-
-.flow.is-loading .flow-line {
-  height: 100%;
-}
-
-.flow.is-loading .flow-dot {
-  opacity: 1;
-  animation: travel 1.1s ease-in-out infinite;
-}
-
-.flow.is-settled {
-  height: 2.75rem;
-}
-
-.flow.is-settled .flow-line {
-  height: 100%;
-  background: var(--rule);
-}
-
-@keyframes travel {
-  0% {
-    top: -4px;
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    top: calc(2.75rem - 4px);
-    opacity: 0;
-  }
-}
-
-.status {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
-  color: var(--ink-dim);
-  margin: 0 0 1.5rem 1.2rem;
-}
-
-.dots {
-  display: inline-flex;
-  gap: 0.15em;
-  margin-left: 0.2em;
-}
-
-.dots span {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--ink-dim);
-  opacity: 0.2;
-  animation: blink 1.2s ease-in-out infinite;
-}
-
-.dots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.dots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes blink {
-  0%,
-  80%,
-  100% {
-    opacity: 0.2;
-  }
-  40% {
-    opacity: 1;
-  }
-}
-
-/* ---- result ---- */
-.result {
-  margin-top: 0.5rem;
+.turn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
   animation: rise 0.35s ease both;
 }
 
@@ -311,36 +151,95 @@ body {
     opacity: 0;
     transform: translateY(6px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.label {
-  font-family: var(--mono);
-  font-weight: 500;
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-dim);
-  margin: 0 0 0.6rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--rule);
+/* user message: quiet bubble, right-aligned */
+.turn-user {
+  display: flex;
+  justify-content: flex-end;
 }
 
-.answer {
-  font-size: 1.15rem;
-  line-height: 1.75;
+.turn-question {
+  max-width: 80%;
+  margin: 0;
+  background: var(--bg-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: 14px 14px 4px 14px;
+  padding: 0.65rem 1rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
   color: var(--ink);
-  margin: 0 0 2.25rem;
 }
 
-.answer > *:first-child {
+/* agent response: card, left-aligned, carries the mode stamp */
+.turn-agent {
+  max-width: 92%;
+  background: var(--bg-raised);
+  border: 1px solid var(--rule);
+  border-radius: 4px 14px 14px 14px;
+  padding: 1.15rem 1.3rem 1.35rem;
+}
+
+/* ---- mode stamp: the one signal that matters ----
+   quiet outline for an ordinary answer; a rotated, filled "stamp"
+   for a journal entry, because that's the action worth noticing. */
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.mode-badge--inquiry {
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+}
+
+.mode-badge--journal {
+  color: #fbf8ee;
+  background: var(--growth);
+  border: 1px solid var(--growth);
+  font-weight: 600;
+  transform: rotate(-2deg);
+  box-shadow: 0 2px 0 rgba(33, 31, 25, 0.1);
+}
+
+.mode-badge--other {
+  color: var(--ink-dim);
+  background: transparent;
+  border: 1px dashed var(--rule-strong);
+}
+
+/* ---- answer typography ---- */
+.answer {
+  font-size: 1.02rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.answer>*:first-child {
   margin-top: 0;
 }
 
-.answer > *:last-child {
+.answer>*:last-child {
   margin-bottom: 0;
 }
 
@@ -362,8 +261,8 @@ body {
   margin-bottom: 0.4em;
 }
 
-.answer li > ul,
-.answer li > ol {
+.answer li>ul,
+.answer li>ol {
   margin-top: 0.4em;
   margin-bottom: 0;
 }
@@ -379,16 +278,16 @@ body {
 }
 
 .answer h1 {
-  font-size: 1.3em;
+  font-size: 1.25em;
 }
 
 .answer h2 {
-  font-size: 1.15em;
+  font-size: 1.12em;
 }
 
 .answer h3,
 .answer h4 {
-  font-size: 1.05em;
+  font-size: 1.03em;
 }
 
 .answer code {
@@ -431,41 +330,124 @@ body {
   padding: 0.2em 0;
 }
 
-.sources-label {
-  margin-top: 0;
-}
-
-.sources {
+/* ---- typing indicator (a seed dropping, not a progress bar) ---- */
+.flow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.source-chip {
-  display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  color: var(--ink);
-  background: var(--bg-raised);
-  border: 1px solid var(--rule-strong);
-  border-bottom: 2px solid var(--chalk);
-  border-radius: 3px;
-  padding: 0.4rem 0.7rem;
+  gap: 0.3rem;
+  height: 0.4rem;
+  margin: 0 0 0.5rem 0.1rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.source-chip .idx {
-  color: var(--accent);
+.flow.is-loading,
+.flow.is-settled {
+  opacity: 1;
+}
+
+.flow-line {
+  display: none;
+}
+
+.flow-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--growth);
+  opacity: 0.3;
+  box-shadow: 11px 0 var(--growth), 22px 0 var(--growth);
+}
+
+.flow.is-loading .flow-dot {
+  animation: germinate 1.1s ease-in-out infinite;
+}
+
+.flow.is-settled .flow-dot {
+  opacity: 0.18;
+  box-shadow: 11px 0 var(--rule-strong), 22px 0 var(--rule-strong);
+  background: var(--rule-strong);
+}
+
+@keyframes germinate {
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+
+  40% {
+    opacity: 1;
+  }
+}
+
+.status {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  margin: 0 0 1.25rem 0.1rem;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 0.15em;
+  margin-left: 0.2em;
+}
+
+.dots span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--ink-dim);
+  opacity: 0.2;
+  animation: blink 1.2s ease-in-out infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+
+  40% {
+    opacity: 1;
+  }
 }
 
 /* ---- empty / error state ---- */
 .state-panel {
   animation: rise 0.35s ease both;
+  background: var(--bg-raised);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 1.5rem 1.5rem 1.65rem;
+  margin-bottom: 1.5rem;
+}
+
+.label {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin: 0 0 0.5rem;
 }
 
 .state-text {
-  font-size: 1.05rem;
+  font-size: 1rem;
   line-height: 1.6;
   color: var(--ink-dim);
   margin: 0;
@@ -475,19 +457,122 @@ body {
   color: var(--accent);
 }
 
+/* ---- composer: sticks to the bottom like a chat app ---- */
+.composer {
+  position: sticky;
+  bottom: 0;
+  padding: 1rem 0 1.4rem;
+  background: linear-gradient(to top, var(--bg) 65%, transparent);
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.chip-example {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+  background: var(--bg-raised);
+  border: 1px dashed var(--rule-strong);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.chip-example:hover {
+  color: var(--ink);
+  border-color: var(--ink-dim);
+}
+
+.prompt-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--rule-strong);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 1px 2px rgba(33, 31, 25, 0.04), 0 8px 20px rgba(33, 31, 25, 0.06);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prompt-bar:focus-within {
+  border-color: var(--growth);
+  box-shadow: 0 1px 2px rgba(33, 31, 25, 0.04), 0 8px 20px rgba(75, 106, 74, 0.12);
+}
+
+.prompt-caret {
+  font-family: var(--mono);
+  color: var(--growth);
+  font-weight: 600;
+}
+
+.prompt-bar input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 1rem;
+  min-width: 0;
+}
+
+.prompt-bar input::placeholder {
+  color: var(--ink-dim);
+}
+
+.prompt-bar button {
+  background: none;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  padding: 0.35rem 0.65rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.prompt-bar button:hover:not(:disabled) {
+  color: #fbf8ee;
+  background: var(--growth);
+  border-color: var(--growth);
+}
+
+.prompt-bar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.prompt-bar input:focus-visible,
+.prompt-bar button:focus-visible,
+.chip-example:focus-visible,
+.new-thread-btn:focus-visible {
+  outline: 2px solid var(--chalk);
+  outline-offset: 2px;
+}
+
 /* ---- motion & accessibility ---- */
 @media (prefers-reduced-motion: reduce) {
-  .flow-line,
+
   .flow-dot,
-  .result,
+  .turn,
   .state-panel,
   .dots span {
     animation: none !important;
     transition: none !important;
   }
+
   .dots span {
     opacity: 1;
   }
+
   .flow.is-loading .flow-dot {
     opacity: 1;
   }
@@ -495,6 +580,16 @@ body {
 
 @media (max-width: 30rem) {
   .prompt-bar {
-    padding: 0.75rem 0.85rem;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .turn-question,
+  .turn-agent {
+    max-width: 96%;
+  }
+
+  .head-top {
+    flex-direction: column;
+    gap: 0.6rem;
   }
 }
