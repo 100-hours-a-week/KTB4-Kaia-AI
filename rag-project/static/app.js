@@ -4,16 +4,34 @@ const submitBtn = document.getElementById("submit-btn");
 const examples = document.getElementById("examples");
 const flow = document.getElementById("flow");
 const status = document.getElementById("status");
-const result = document.getElementById("result");
-const answerText = document.getElementById("answer-text");
-const sources = document.getElementById("sources");
+const thread = document.getElementById("thread");
+const turnTemplate = document.getElementById("turn-template");
 const statePanel = document.getElementById("state-panel");
 const stateLabel = document.getElementById("state-label");
 const stateText = document.getElementById("state-text");
 const announcer = document.getElementById("announcer");
 const corpusNote = document.getElementById("corpus-note");
+const newThreadBtn = document.getElementById("new-thread-btn");
+
+const THREAD_ID_KEY = "kaia-thread-id";
 
 marked.setOptions({ breaks: true, gfm: true });
+
+function getThreadId() {
+  let id = localStorage.getItem(THREAD_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(THREAD_ID_KEY, id);
+  }
+  return id;
+}
+
+function startNewThread() {
+  localStorage.setItem(THREAD_ID_KEY, crypto.randomUUID());
+  thread.innerHTML = "";
+  statePanel.hidden = true;
+  announcer.textContent = "새 대화를 시작했습니다.";
+}
 
 function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -29,7 +47,7 @@ function fixEmphasisSpacing(text) {
 // LaTeX($...$, $$...$$)는 markdown 파서가 모르는 문법이라 그대로 파싱하면
 // 밑줄(_)이 이탤릭으로 오인되는 등 깨질 수 있어, 마크다운 변환 전에 토큰으로
 // 빼뒀다가 렌더링 후 복원하고 KaTeX로 별도 typeset한다.
-function renderAnswerMarkdown(rawText) {
+function renderAnswerMarkdown(target, rawText) {
   const mathTokens = [];
   const protectedText = fixEmphasisSpacing(rawText).replace(/\$\$[\s\S]+?\$\$|\$[^\n$]+?\$/g, (match) => {
     mathTokens.push(match);
@@ -39,10 +57,10 @@ function renderAnswerMarkdown(rawText) {
   let html = DOMPurify.sanitize(marked.parse(protectedText));
   html = html.replace(/@@MATH(\d+)@@/g, (_, i) => escapeHtml(mathTokens[Number(i)]));
 
-  answerText.innerHTML = html;
+  target.innerHTML = html;
 
   if (window.renderMathInElement) {
-    renderMathInElement(answerText, {
+    renderMathInElement(target, {
       delimiters: [
         { left: "$$", right: "$$", display: true },
         { left: "$", right: "$", display: false },
@@ -51,6 +69,11 @@ function renderAnswerMarkdown(rawText) {
     });
   }
 }
+
+const MODE_STAMPS = {
+  answer_question: { label: "질문에 답함", icon: "🔎", cls: "mode-badge--inquiry" },
+  journal_write: { label: "학습일지에 저장됨", icon: "🌱", cls: "mode-badge--journal" },
+};
 
 function pickSample(list, n) {
   if (list.length <= n) return list;
@@ -82,38 +105,29 @@ async function loadCorpus() {
   }
 }
 
-function resetPanels() {
-  flow.classList.remove("is-loading", "is-settled");
-  flow.hidden = false;
-  status.hidden = true;
-  result.hidden = true;
-  statePanel.hidden = true;
-  statePanel.classList.remove("is-error");
-}
+function appendTurn(question, data) {
+  const node = turnTemplate.content.cloneNode(true);
+  const turnQuestion = node.querySelector(".turn-question");
+  const answerEl = node.querySelector(".answer");
+  const sourcesEl = node.querySelector(".sources");
 
-function sourceLabel(path) {
-  const stem = path.split("/").pop().replace(/\.md$/i, "");
-  return stem
-    .split(/[-_]/)
-    .map((word) => (/^\d+$/.test(word) ? word : word.charAt(0).toUpperCase() + word.slice(1)))
-    .join(" ");
-}
-
-function showResult(data) {
-  flow.classList.remove("is-loading");
-  flow.classList.add("is-settled");
-  status.hidden = true;
-
-  renderAnswerMarkdown(data.answer);
-  sources.innerHTML = "";
-  data.sources.forEach((src, i) => {
-    const chip = document.createElement("span");
-    chip.className = "source-chip";
-    chip.innerHTML = `<span class="idx">[${i + 1}]</span> ${sourceLabel(src)}`;
-    sources.appendChild(chip);
+  turnQuestion.textContent = question;
+  renderAnswerMarkdown(answerEl, data.answer);
+  data.tools_used.forEach((name) => {
+    const stamp = MODE_STAMPS[name] ?? { label: name, icon: "•", cls: "mode-badge--other" };
+    const badge = document.createElement("span");
+    badge.className = `mode-badge ${stamp.cls}`;
+    badge.textContent = `${stamp.icon} ${stamp.label}`;
+    sourcesEl.appendChild(badge);
   });
-  result.hidden = false;
-  announcer.textContent = `답변을 표시했습니다. 출처 ${data.sources.length}건.`;
+
+  thread.appendChild(node);
+  thread.scrollIntoView({ block: "end", behavior: "smooth" });
+
+  const stampLabels = data.tools_used.map((name) => (MODE_STAMPS[name] ?? { label: name }).label);
+  announcer.textContent = stampLabels.length
+    ? `${stampLabels.join(", ")}.`
+    : "답변을 표시했습니다.";
 }
 
 function showState({ label, text, isError }) {
@@ -128,30 +142,28 @@ function showState({ label, text, isError }) {
 }
 
 async function ask(question) {
-  resetPanels();
+  flow.classList.remove("is-settled");
+  flow.hidden = false;
   flow.classList.add("is-loading");
   status.hidden = false;
+  statePanel.hidden = true;
   submitBtn.disabled = true;
-  announcer.textContent = "검색 중입니다.";
+  announcer.textContent = "생각 중입니다.";
 
   try {
-    const res = await fetch("/ask", {
+    const res = await fetch("/converse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ message: question, thread_id: getThreadId() }),
     });
+
+    flow.classList.remove("is-loading");
+    flow.classList.add("is-settled");
+    status.hidden = true;
 
     if (res.ok) {
       const data = await res.json();
-      showResult(data);
-      return;
-    }
-
-    if (res.status === 404) {
-      showState({
-        label: "no match",
-        text: "이 질문에 대한 근거를 색인된 문서에서 찾지 못했습니다. 다른 표현으로 다시 물어보세요.",
-      });
+      appendTurn(question, data);
       return;
     }
 
@@ -175,6 +187,8 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   const question = input.value.trim();
   if (!question) return;
+  input.value = "";
+  submitBtn.disabled = true;
   ask(question);
 });
 
@@ -185,10 +199,10 @@ input.addEventListener("input", () => {
 examples.addEventListener("click", (e) => {
   const btn = e.target.closest(".chip-example");
   if (!btn) return;
-  input.value = btn.textContent;
-  submitBtn.disabled = false;
   ask(btn.textContent);
 });
+
+newThreadBtn.addEventListener("click", startNewThread);
 
 submitBtn.disabled = true;
 loadCorpus();

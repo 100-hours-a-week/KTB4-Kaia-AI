@@ -20,6 +20,7 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data" / "processed"
 CHROMA_COLLECTION = "cs231n"
 TOP_K = 5
+RELEVANCE_THRESHOLD = 0.4  # grade_docs: top1 relevance score 미만이면 재검색 트리거 (스팟체크 n=4 기준)
 
 
 # ---------------- 임베딩 & 벡터스토어 ----------------
@@ -104,11 +105,18 @@ def _get_retriever(embeddings, k: int = TOP_K):
 
 def _build_llm():
     # 생성 LLM만 provider를 고른다(LLM_PROVIDER).
-    if os.getenv("LLM_PROVIDER", "google").lower() == "ollama":
+    provider = os.getenv("LLM_PROVIDER", "google").lower()
+    if provider == "ollama":
         from langchain_ollama import ChatOllama
         return ChatOllama(
             model=os.getenv("OLLAMA_MODEL", "gemma4:e2b"),
             base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        )
+    if provider == "cerebras":
+        from langchain_cerebras import ChatCerebras
+        return ChatCerebras(
+            model=os.getenv("CEREBRAS_MODEL", "gemma-4-31b"),
+            api_key=os.getenv("CEREBRAS_API_KEY"),
         )
     return ChatGoogleGenerativeAI(
         model=os.getenv("GOOGLE_MODEL", "gemini-2.5-flash"),
@@ -128,6 +136,18 @@ PROMPT = ChatPromptTemplate.from_messages([
     ("human", "{question}"),
 ])
 
+REWRITE_PROMPT = ChatPromptTemplate.from_messages([
+    ("system",
+     "You rewrite search queries for a document retrieval system. "
+     "The question below failed to retrieve relevant documents. "
+     "Rewrite it using terminology and phrasing that actually appears in the document"
+     "or reframe it from a different angle, so that a new search against the same corpus "
+     "is more likely to find relevant material. "
+     "Do not answer the question. Do not invent facts not present in the documents. "
+     "Output ONLY the rewritten question — no explanation, no prefix, no quotes.\n\n"
+     "{context}"),
+    ("human", "{question}"),
+])  
 
 def _format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
