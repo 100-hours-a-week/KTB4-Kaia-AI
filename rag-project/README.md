@@ -59,7 +59,7 @@ Agent가 journal_write 호출 (저장 여부 먼저 확인)
 
 ## 아키텍처
 
-![Architecture](diagram.svg)
+![Architecture](docs/diagram.svg)
 
 서버 시작 시 에이전트 그래프를 한 번만 구성해 재사용합니다(요청마다 새로 만들지 않음).  \
 사용자 메시지가 오면 LLM이 시스템 프롬프트와 대화 맥락을 보고 `answer_question` / `journal_write` 중 하나를 부르거나, 애매하면 되묻습니다. 모든 실행은 LangSmith로 추적·평가됩니다.
