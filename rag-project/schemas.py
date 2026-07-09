@@ -14,7 +14,7 @@ class SavedDocument(BaseModel):
 class ConverseResponse(BaseModel):
     answer: str
     tools_used: list[str] = Field(description="이번 턴에 호출된 tool 이름 목록 (없으면 빈 리스트)")
-    documents: list[SavedDocument] = Field(default_factory=list, description="이번 턴에 저장된 문서(journal_write 등)")
+    documents: list[SavedDocument] = Field(default_factory=list, description="이번 턴에 저장된 문서(til_write 등)")
 
 
 class CorpusResponse(BaseModel):

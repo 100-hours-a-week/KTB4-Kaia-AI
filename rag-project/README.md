@@ -24,14 +24,20 @@ Knowledge Gardener는 질문에는 근거 있는 답을 주고, 배운 내용은
 **근거 기반 질의응답** (`answer_question`)  
 검색된 문서에 근거해서만 답변을 생성하고, 참고한 문서(`sources`)를 함께 반환합니다. 검색 품질이 낮으면(top1 relevance score < 0.4) 질문을 다시 써서 재검색합니다 — 무한 루프 방지를 위해 최대 2회.
 
-**학습일지 자동 저장** (`journal_write`)  
+**TIL 자동 저장** (`til_write`)  
 "오늘 ~공부했어", "~에서 막혔어" 같은 회고형 발화를 감지하면, 저장 여부를 먼저 확인한 뒤 `{주제, 배운 것, 막힌 것, 연결 개념}` 구조로 저장합니다. 날짜는 LLM이 아니라 서버가 직접 채워 신뢰가 필요 없는 사실까지 LLM에 맡기지 않습니다.
 
+**주간 학습 지도** (`wil_synthesize`)  
+"이번 주 정리해줘"처럼 하루가 아니라 한 주 전체의 학습 콘텐츠를 묻는 요청에서, 이번 주(월요일~오늘) TIL을 종합해 이번 주 학습 지도·흐름·연결된 개념을 WIL(Week I Learned)로 저장합니다.
+
+**회고** (`retrospective_write`)  
+"이번 주 회고 써줘", "이번 프로젝트 회고 정리하고 싶어" 같은 요청에서, 대화로 직접 엘리시트한 내용(주요 결정과 이유/해결 경험/어려웠던 점/느낀 점/앞으로 하고 싶은 것)을 정리해 저장합니다. WIL과 독립적으로 동작합니다 — 프로젝트 회고든 학습 회고든, WIL 산출물이 없어도 씁니다.
+
 **질문 vs 회고, 에이전트가 스스로 판단**  
-키워드 매칭이 아니라 LLM이 tool description을 보고 두 tool 중 무엇을 부를지 스스로 판단합니다(tool-calling). `MemorySaver` + `thread_id`로 멀티턴 맥락도 유지됩니다.
+키워드 매칭이 아니라 LLM이 tool description을 보고 네 tool 중 무엇을 부를지 스스로 판단합니다(tool-calling). `MemorySaver` + `thread_id`로 멀티턴 맥락도 유지됩니다.
 
 **계속 자라나는 지식베이스**  
-저장된 학습일지는 기존 문서 인덱싱 파이프라인을 그대로 재사용해 검색 대상에 편입됩니다. 쓸수록 코퍼스가 늘어나고, 코퍼스가 늘어날수록 답변의 근거도 풍부해집니다.
+저장된 TIL은 기존 문서 인덱싱 파이프라인을 그대로 재사용해 검색 대상에 편입됩니다. 쓸수록 코퍼스가 늘어나고, 코퍼스가 늘어날수록 답변의 근거도 풍부해집니다.
 
 ---
 
@@ -48,11 +54,21 @@ Agent가 answer_question 호출 → retrieve → grade_docs
 
 사용자: "오늘 Attention 공부했어. Positional Encoding에서 막혔어."
    ↓
-Agent가 journal_write 호출 (저장 여부 먼저 확인)
+Agent가 til_write 호출 (저장 여부 먼저 확인)
    ↓
-{topic, learned, stuck, related_concepts} → data/journal/*.md 저장
+{topic, learned, stuck, related_concepts} → data/til/*.md 저장
    ↓
 다음 인덱싱 시 검색 대상에 편입
+
+사용자: "이번 주 회고 써줘"
+   ↓
+Agent가 대화로 직접 엘리시트 (주요 결정/해결 경험/어려웠던 점/느낀 점/앞으로 하고 싶은 것)
+   ↓
+Agent가 retrospective_write 호출 (저장 여부 먼저 확인) → data/retrospective/*.md 저장
+
+사용자: "이번 주 뭐 공부했는지 정리해줘"
+   ↓
+Agent가 wil_synthesize 호출 → data/wil/*.md (이번 주 월~오늘 TIL 콘텐츠 종합, 회고 아님)
 ```
 
 ---
@@ -62,7 +78,7 @@ Agent가 journal_write 호출 (저장 여부 먼저 확인)
 ![Architecture](docs/diagram.svg)
 
 서버 시작 시 에이전트 그래프를 한 번만 구성해 재사용합니다(요청마다 새로 만들지 않음).  \
-사용자 메시지가 오면 LLM이 시스템 프롬프트와 대화 맥락을 보고 `answer_question` / `journal_write` 중 하나를 부르거나, 애매하면 되묻습니다. 모든 실행은 LangSmith로 추적·평가됩니다.
+사용자 메시지가 오면 LLM이 시스템 프롬프트와 대화 맥락을 보고 `answer_question` / `til_write` / `wil_synthesize` / `retrospective_write` 중 무엇을 부를지 스스로 판단하거나, 애매하면 되묻습니다. 모든 실행은 LangSmith로 추적·평가됩니다.
 
 ---
 
@@ -91,8 +107,8 @@ rag-project/
 ├── main.py              # FastAPI 진입점 (lifespan에서 에이전트 그래프 1회 구성)
 ├── graph.py              # QA 그래프(재검색 루프) / 에이전트 그래프(tool-calling+메모리)
 ├── nodes.py              # retrieve / generate / grade_docs / rewrite_query 노드
-├── tools.py              # answer_question / journal_write
-├── writer.py             # write_daily / write_weekly / write_til
+├── tools.py              # answer_question / til_write / wil_synthesize / retrospective_write
+├── writer.py             # write_til / write_wil / write_retrospective
 ├── rag.py                # 임베딩·벡터스토어·LLM 빌더
 ├── routers/ · controllers/ · schemas/   # API 레이어
 ├── prompts/              # 콘텐츠 프롬프트

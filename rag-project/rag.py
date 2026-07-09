@@ -25,7 +25,7 @@ RELEVANCE_THRESHOLD = 0.4  # grade_docs: top1 relevance score 미만이면 재�
 
 # ---------------- 임베딩 & 벡터스토어 ----------------
 
-def _build_embeddings():
+def build_embeddings():
     return HuggingFaceEmbeddings(
         model_name="BAAI/bge-m3",
         model_kwargs={"device": "cuda" if os.getenv("USE_CUDA", "false").lower() == "true" else "cpu"},
@@ -70,7 +70,6 @@ def _load_split_docs():
 
 
 def _inject_header_context(doc) -> None:
-    # page_content에 헤더 정보를 metadata에서 복원
     m = doc.metadata
     parts = [m.get("h1"), m.get("h2"), m.get("h3")]
     prefix = " > ".join(p for p in parts if p)
@@ -78,7 +77,7 @@ def _inject_header_context(doc) -> None:
         doc.page_content = f"{prefix}\n\n{doc.page_content}"
 
 
-def _get_vectorstore(embeddings):
+def get_vectorstore(embeddings):
     client = _build_chroma_client()
     existing = {c.name for c in client.list_collections()}
     if CHROMA_COLLECTION in existing:
@@ -98,12 +97,12 @@ def _get_vectorstore(embeddings):
 
 
 def _get_retriever(embeddings, k: int = TOP_K):
-    return _get_vectorstore(embeddings).as_retriever(search_kwargs={"k": k})
+    return get_vectorstore(embeddings).as_retriever(search_kwargs={"k": k})
 
 
 # ---------------- LLM ----------------
 
-def _build_llm():
+def build_llm():
     # 생성 LLM만 provider를 고른다(LLM_PROVIDER).
     provider = os.getenv("LLM_PROVIDER", "google").lower()
     if provider == "ollama":
@@ -153,7 +152,7 @@ def _format_docs(docs):
     return "\n\n".join(d.page_content for d in docs)
 
 
-def _extract_sources(docs):
+def extract_sources(docs):
     sources = []
     for d in docs:
         src = d.metadata.get("source", "unknown")
@@ -164,16 +163,16 @@ def _extract_sources(docs):
 
 def ingest():
     """인덱싱만 단독 실행. `uv run python rag.py`"""
-    embeddings = _build_embeddings()
-    vectorstore = _get_vectorstore(embeddings)
+    embeddings = build_embeddings()
+    vectorstore = get_vectorstore(embeddings)
     print(f"인덱싱 완료: {vectorstore._collection.count()}개 청크")
 
 
 def build_rag_chain():
     """인덱싱(필요 시) + LCEL 체인 구성. invoke(question) → {answer, sources}."""
-    embeddings = _build_embeddings()
+    embeddings = build_embeddings()
     retriever = _get_retriever(embeddings)
-    llm = _build_llm()
+    llm = build_llm()
 
     # 검색을 1회만 수행해 답변 생성과 출처 추출이 같은 docs를 공유
     retrieve = RunnableParallel(docs=retriever, question=RunnablePassthrough())
@@ -188,7 +187,7 @@ def build_rag_chain():
     )
     return retrieve | RunnableParallel(
         answer=generate,
-        sources=lambda x: _extract_sources(x["docs"]),
+        sources=lambda x: extract_sources(x["docs"]),
     )
 
 
