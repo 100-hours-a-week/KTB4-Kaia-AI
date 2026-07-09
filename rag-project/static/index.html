@@ -4,7 +4,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🌱 지식정원사</title>
+  <script>
+    (function () {
+      var saved = localStorage.getItem("kaia-theme");
+      if (saved === "light" || saved === "dark") {
+        document.documentElement.dataset.theme = saved;
+      } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    })();
+  </script>
+  <title>Knowledge Gardener</title>
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>" />
   <meta name="description" content="질문에는 코퍼스를 찾아 답하고, 오늘 배운 걸 들려주면 학습일지로 남기는 개인 학습 에이전트" />
@@ -23,13 +33,18 @@
     <header class="head">
       <div class="head-top">
         <div>
-          <p class="eyebrow">지식정원사 · Knowledge Gardener</p>
+          <p class="eyebrow">Knowledge Gardener</p>
           <h1 class="title">질문하고, 기록하는 곳</h1>
         </div>
-        <button type="button" class="new-thread-btn" id="new-thread-btn">새 대화</button>
+        <div class="head-actions">
+          <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" aria-pressed="false">
+            <span id="theme-toggle-label">다크로</span>
+          </button>
+          <button type="button" class="new-thread-btn" id="new-thread-btn">새 대화</button>
+        </div>
       </div>
       <p class="sub">
-        궁금한 걸 물으면 코퍼스를 찾아 답하고, 오늘 배운 걸 들려주면 학습일지로 심어둡니다.
+        궁금한 걸 물으면 문서를 찾아 답하고, 오늘 배운 걸 들려주면 학습일지로 만듭니다.
       </p>
       <p class="corpus-note" id="corpus-note" hidden></p>
     </header>

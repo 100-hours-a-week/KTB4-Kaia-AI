@@ -4,8 +4,8 @@ from langchain_core.messages import HumanMessage
 
 from schemas import ConverseResponse, SavedDocument, ThreadHistoryResponse, ThreadMessage
 
-# writer.write_daily가 "저장 완료: {path}\n\n{내용}" 형식으로 반환하는 tool 이름들
-_DOCUMENT_TOOLS = {"journal_write"}
+# writer.write_til/write_wil/write_retrospective가 "저장 완료: {path}\n\n{내용}" 형식으로 반환하는 tool 이름들
+_DOCUMENT_TOOLS = {"til_write", "wil_synthesize", "retrospective_write"}
 
 
 def _extract_documents(tool_messages) -> list[SavedDocument]:

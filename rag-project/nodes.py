@@ -1,4 +1,4 @@
-from rag import RELEVANCE_THRESHOLD, TOP_K, _extract_sources
+from rag import RELEVANCE_THRESHOLD, TOP_K, extract_sources
 from state import GraphState
 
 
@@ -16,7 +16,7 @@ def make_nodes(vectorstore, prompt, rewrite_prompt, llm):
         response = llm.invoke(messages)
         return {
             "answer": response.content,
-            "sources": _extract_sources(state["document"]),
+            "sources": extract_sources(state["document"]),
         }
 
     def grade_docs_node(state: GraphState):

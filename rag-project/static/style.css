@@ -1,7 +1,10 @@
 /* ---- tokens ----
    paper you'd actually keep a learning log on. terracotta marks a question,
-   moss marks something just planted — the two things this agent does. */
+   moss marks something just planted — the two things this agent does.
+   dark mode swaps paper for soil: same two hues, re-tuned to sit on a dark
+   ground so the journal still reads as itself after sunset. */
 :root {
+  color-scheme: light;
   --bg: #f6f3ec;
   --bg-raised: #fffdf8;
   --ink: #211f19;
@@ -12,19 +15,33 @@
   /* journal — moss, something newly planted */
   --growth-soft: #eef1e6;
   --chalk: #a6821c;
-  --rule: rgba(33, 31, 25, 0.08);
-  --rule-strong: rgba(33, 31, 25, 0.16);
+  --on-growth: #fbf8ee;
+  --line-rgb: 33, 31, 25;
+  --shadow-rgb: 33, 31, 25;
+  --rule: rgba(var(--line-rgb), 0.08);
+  --rule-strong: rgba(var(--line-rgb), 0.16);
 
   --mono: "JetBrains Mono", ui-monospace, monospace;
   --sans: "Inter", -apple-system, "Segoe UI", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1913;
+  --bg-raised: #252219;
+  --ink: #f1ece0;
+  --ink-dim: #b0a68e;
+  --accent: #e07a5f;
+  --growth: #8fb885;
+  --growth-soft: #2a3324;
+  --chalk: #d1a53d;
+  --on-growth: #1b1913;
+  --line-rgb: 241, 236, 224;
+  --shadow-rgb: 0, 0, 0;
 }
 
-html {
-  color-scheme: light;
+* {
+  box-sizing: border-box;
 }
 
 [hidden] {
@@ -111,8 +128,16 @@ body {
   margin: 0.6rem 0 0;
 }
 
-.new-thread-btn {
+.head-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.new-thread-btn,
+.theme-toggle-btn {
   font-family: var(--mono);
   font-size: 0.75rem;
   color: var(--ink-dim);
@@ -122,10 +147,10 @@ body {
   padding: 0.4rem 0.85rem;
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease;
-  margin-top: 0.2rem;
 }
 
-.new-thread-btn:hover {
+.new-thread-btn:hover,
+.theme-toggle-btn:hover {
   color: var(--ink);
   border-color: var(--ink-dim);
 }
@@ -214,12 +239,12 @@ body {
 }
 
 .mode-badge--journal {
-  color: #fbf8ee;
+  color: var(--on-growth);
   background: var(--growth);
   border: 1px solid var(--growth);
   font-weight: 600;
   transform: rotate(-2deg);
-  box-shadow: 0 2px 0 rgba(33, 31, 25, 0.1);
+  box-shadow: 0 2px 0 rgba(var(--shadow-rgb), 0.1);
 }
 
 .mode-badge--other {
@@ -497,13 +522,13 @@ body {
   border: 1px solid var(--rule-strong);
   border-radius: 12px;
   padding: 0.85rem 1rem;
-  box-shadow: 0 1px 2px rgba(33, 31, 25, 0.04), 0 8px 20px rgba(33, 31, 25, 0.06);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb), 0.04), 0 8px 20px rgba(var(--shadow-rgb), 0.06);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .prompt-bar:focus-within {
   border-color: var(--growth);
-  box-shadow: 0 1px 2px rgba(33, 31, 25, 0.04), 0 8px 20px rgba(75, 106, 74, 0.12);
+  box-shadow: 0 1px 2px rgba(var(--shadow-rgb), 0.04), 0 8px 20px rgba(75, 106, 74, 0.12);
 }
 
 .prompt-caret {
@@ -540,7 +565,7 @@ body {
 }
 
 .prompt-bar button:hover:not(:disabled) {
-  color: #fbf8ee;
+  color: var(--on-growth);
   background: var(--growth);
   border-color: var(--growth);
 }
@@ -553,7 +578,8 @@ body {
 .prompt-bar input:focus-visible,
 .prompt-bar button:focus-visible,
 .chip-example:focus-visible,
-.new-thread-btn:focus-visible {
+.new-thread-btn:focus-visible,
+.theme-toggle-btn:focus-visible {
   outline: 2px solid var(--chalk);
   outline-offset: 2px;
 }

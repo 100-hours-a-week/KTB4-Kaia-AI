@@ -12,8 +12,11 @@ const stateText = document.getElementById("state-text");
 const announcer = document.getElementById("announcer");
 const corpusNote = document.getElementById("corpus-note");
 const newThreadBtn = document.getElementById("new-thread-btn");
+const themeToggleBtn = document.getElementById("theme-toggle-btn");
+const themeToggleLabel = document.getElementById("theme-toggle-label");
 
 const THREAD_ID_KEY = "kaia-thread-id";
+const THEME_KEY = "kaia-theme";
 
 marked.setOptions({ breaks: true, gfm: true });
 
@@ -32,6 +35,40 @@ function startNewThread() {
   statePanel.hidden = true;
   announcer.textContent = "새 대화를 시작했습니다.";
 }
+
+const darkMediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+function isDarkActive() {
+  const saved = localStorage.getItem(THEME_KEY);
+  return saved ? saved === "dark" : darkMediaQuery.matches;
+}
+
+function syncThemeToggleUi() {
+  const dark = isDarkActive();
+  themeToggleLabel.textContent = dark ? "라이트로" : "다크로";
+  themeToggleBtn.setAttribute("aria-pressed", String(dark));
+}
+
+function toggleTheme() {
+  const next = isDarkActive() ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, next);
+  document.documentElement.dataset.theme = next;
+  syncThemeToggleUi();
+  announcer.textContent = next === "dark" ? "다크 모드로 전환했습니다." : "라이트 모드로 전환했습니다.";
+}
+
+themeToggleBtn.addEventListener("click", toggleTheme);
+darkMediaQuery.addEventListener("change", () => {
+  if (!localStorage.getItem(THEME_KEY)) {
+    if (darkMediaQuery.matches) {
+      document.documentElement.dataset.theme = "dark";
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+    syncThemeToggleUi();
+  }
+});
+syncThemeToggleUi();
 
 function escapeHtml(str) {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -72,7 +109,9 @@ function renderAnswerMarkdown(target, rawText) {
 
 const MODE_STAMPS = {
   answer_question: { label: "질문에 답함", icon: "🔎", cls: "mode-badge--inquiry" },
-  journal_write: { label: "학습일지에 저장됨", icon: "🌱", cls: "mode-badge--journal" },
+  til_write: { label: "TIL로 저장됨", icon: "🌱", cls: "mode-badge--journal" },
+  wil_synthesize: { label: "WIL로 종합됨", icon: "🗂️", cls: "mode-badge--journal" },
+  retrospective_write: { label: "회고로 저장됨", icon: "📝", cls: "mode-badge--journal" },
 };
 
 function pickSample(list, n) {
